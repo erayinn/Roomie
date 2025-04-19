@@ -3,3 +3,7 @@ SQLAlchemy
 uvicorn
 pydantic
 starlette
+passlib
+bcrypt
+python-multipart
+python-jose

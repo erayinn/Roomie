@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 
 from database import Base
 from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, ForeignKey, Text
@@ -14,7 +14,7 @@ class User(Base):
     hashed_password = Column(String)
     phone_number = Column(String(10))
     user_type = Column(String)
-    created_at = Column(DateTime,default=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     hotels = relationship("Hotel", back_populates="manager")
     reservations = relationship("Rezervation", back_populates="user")
