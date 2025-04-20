@@ -43,9 +43,9 @@ def create_access_token(email: str,user_id:int,user_type:str,expires_delta:timed
 def auth_user(email: str, password: str,db):
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        return False
+        return None
     if not bcrypt.verify(password, user.hashed_password):
-        return False
+        return None
     return user
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
@@ -67,7 +67,7 @@ def get_db():
         db.close()
 db_dependency = Annotated[Session, Depends(get_db)]
 
-@router.get("/read_all")
+@router.get("/")
 async def read_all(db: db_dependency):
     return db.query(User).all()
 

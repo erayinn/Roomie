@@ -17,7 +17,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     hotels = relationship("Hotel", back_populates="manager")
-    reservations = relationship("Rezervation", back_populates="user")
+    reservations = relationship("Reservation", back_populates="user")
     comments = relationship("Comment", back_populates="user")
 
 
@@ -50,11 +50,11 @@ class Room(Base):
     created_at = Column(DateTime,default=datetime.now)
 
     hotel = relationship("Hotel", back_populates="rooms")
-    reservations = relationship("Rezervation", back_populates="room")
+    reservations = relationship("Reservation", back_populates="room")
 
 
-class Rezervation(Base):
-    __tablename__ = 'rezervations'
+class Reservation(Base):
+    __tablename__ = 'reservations'
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
