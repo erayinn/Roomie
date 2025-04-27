@@ -7,3 +7,4 @@ passlib
 bcrypt
 python-multipart
 python-jose
+jinja2

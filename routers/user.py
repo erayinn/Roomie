@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path, HTTPException
+from fastapi import APIRouter, Depends, Path, HTTPException, Request
 from pydantic import BaseModel
 from starlette import status
 from models import User
@@ -9,17 +9,18 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
 from datetime import timedelta, datetime,timezone
+from fastapi.templating import Jinja2Templates
 
 router=APIRouter(
     prefix="/user",
     tags=["user"]
 )
-
+templates=Jinja2Templates(directory="templates")
 SECRET_KEY="80vwx3bgm23981qgu5upww9gg8oh98ykb8av22squzejcbu7trk2qokxpl6c2roo"
 ALGORITHM="HS256"
 
 bcrypt = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="user/login")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/user/token")
 
 class UserRequest(BaseModel):
     first_name: str
@@ -67,16 +68,13 @@ def get_db():
         db.close()
 db_dependency = Annotated[Session, Depends(get_db)]
 
-@router.get("/")
-async def read_all(db: db_dependency):
-    return db.query(User).all()
+@router.get("/login")
+def render_login_page(request: Request):
+    return templates.TemplateResponse("login.html",{"request":request})
 
-@router.get("/read_by_id/{user_id}", status_code=status.HTTP_200_OK)
-async def read_by_id(db: db_dependency,user_id: int=Path(gt=0)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is not None:
-        return user
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,)
+@router.get("/register")
+def render_register_page(request: Request):
+    return templates.TemplateResponse("register.html",{"request":request})
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_user(db: db_dependency, user_request: UserRequest):
@@ -91,29 +89,7 @@ async def create_user(db: db_dependency, user_request: UserRequest):
     db.add(user)
     db.commit()
 
-@router.put("/update/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_user(db: db_dependency, user_request: UserRequest, user_id: int=Path(gt=0)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found")
-    user.first_name = user_request.first_name
-    user.last_name = user_request.last_name
-    user.email = user_request.email
-    user.password = user_request.password
-    user.phone_number = user_request.phone_number
-    user.user_type = user_request.user_type
-    db.add(user)
-    db.commit()
-
-@router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(db: db_dependency, user_id: int=Path(gt=0)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found")
-    db.query(User).filter(User.id == user_id).delete()
-    db.commit()
-
-@router.post("/login",response_model=Token)
+@router.post("/token",response_model=Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
     user=auth_user(form_data.username,form_data.password,db)
     if not user:
