@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Anasayfa - Roomie{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md">
+    <h2 class="text-xl font-semibold mb-4 text-gray-700">Hayalindeki oteli bul!</h2>
+    <form action="/search" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input name="location" type="text" placeholder="Lokasyon" class="p-3 border rounded-md" required>
+        <input name="checkin_date" type="date" class="p-3 border rounded-md" required>
+        <input name="checkout_date" type="date" class="p-3 border rounded-md" required>
+        <input name="guests" type="number" placeholder="Kişi Sayısı" min="1" class="p-3 border rounded-md" required>
+        <button type="submit" class="md:col-span-2 bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">Ara</button>
+    </form>
+</section>
+
+<section class="mt-12 max-w-6xl mx-auto p-6">
+    {% if search_done %}
+        <h2 class="text-2xl font-semibold text-gray-700 mb-6">Arama Sonuçları</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% if hotels %}
+                {% for hotel in hotels %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <img src="{{ hotel.image_url }}" alt="Otel Resmi" class="w-full h-48 object-cover">
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold">{{ hotel.name }}</h3>
+                        <p class="text-gray-500">{{ hotel.location }}</p>
+                        {% if hotel.min_price %}
+                            <p class="mt-2 text-indigo-600 font-bold">Başlangıç: {{ hotel.min_price }} TL</p>
+                        {% else %}
+                            <p class="mt-2 text-red-500 font-bold">Uygun fiyat bulunamadı</p>
+                        {% endif %}
+                        <a href="/hotels/{{ hotel.id }}" class="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Detay</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-red-500">Hiç otel bulunamadı.</p>
+            {% endif %}
+        </div>
+    {% else %}
+        <h2 class="text-2xl font-semibold text-gray-700 mb-6">Öne Çıkan Oteller</h2>
+        <p class="text-gray-500">Hemen üstten arama yaparak otel bulabilirsiniz.</p>
+    {% endif %}
+</section>
+{% endblock %}

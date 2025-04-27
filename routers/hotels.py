@@ -6,8 +6,12 @@ from starlette import status
 from database import SessionLocal
 from routers.user import get_current_user
 from models import Hotel
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
+templates = Jinja2Templates(directory="templates")
 
 class HotelRequest(BaseModel):
     name: str
@@ -39,3 +43,18 @@ async def updaate_hotel(user:user_dependency,db: db_dependency, hotelrequest: Ho
     hotel.email = hotelrequest.email
     db.add(hotel)
     db.commit()
+@router.get("/{hotel_id}", response_class=HTMLResponse)
+async def get_hotel_detail(request: Request, db: db_dependency,hotel_id: int = Path(gt=0)):
+    hotel = db.query(Hotel).filter(Hotel.id == hotel_id).first()
+
+    if hotel is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hotel not found")
+
+    return templates.TemplateResponse(
+        "hotel_detail.html",
+        {
+            "request": request,
+            "hotel": hotel,
+            "rooms": hotel.rooms
+        }
+    )

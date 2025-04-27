@@ -32,6 +32,7 @@ class Hotel(Base):
     email = Column(String(100))
     manager_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime,default=datetime.now)
+    image_url = Column(String)
 
     manager = relationship("User", back_populates="hotels")
     rooms = relationship("Room", back_populates="hotel")
