@@ -1,5 +1,5 @@
-from typing import Optional
-
+from typing import Optional, Annotated
+from routers.user import get_current_user
 from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -18,11 +18,33 @@ def get_db():
         yield db
     finally:
         db.close()
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # Ana sayfa
 @router.get("/", response_class=HTMLResponse)
-async def read_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "hotels": [], "search_done": False})
+async def home(request: Request, db: db_dependency):
+    token = request.cookies.get("access_token")
+    user = None
+    try:
+        user = await get_current_user(request)  # ✅ sadece request gönderiyoruz
+    except:
+        user = None
+
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "user": user
+        }
+    )
 
 # Arama sonucu
 @router.post("/search", response_class=HTMLResponse)

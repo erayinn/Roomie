@@ -4,7 +4,7 @@ uvicorn
 pydantic
 starlette
 passlib
-bcrypt
+bcrypt==3.2.0
 python-multipart
 python-jose
 jinja2

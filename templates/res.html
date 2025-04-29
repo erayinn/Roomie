@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Rezervasyonlarım - Roomie{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto mt-10 bg-white p-6 rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold mb-6 text-gray-700">Rezervasyonlarım</h2>
+
+    {% if ress %}
+        <div class="grid grid-cols-1 gap-6">
+            {% for res in ress %}
+                <div class="border p-4 rounded-md shadow-md flex flex-col md:flex-row gap-4">
+                    {% if res.room and res.room.hotel %}
+                        <img src="{{ res.room.hotel.image_url or 'https://via.placeholder.com/400x200' }}" alt="Otel Fotoğrafı" class="w-full md:w-64 h-40 object-cover rounded-md">
+                        <div class="flex-1">
+                            <p><strong>Otel:</strong> {{ res.room.hotel.name }}</p>
+                            <p><strong>Lokasyon:</strong> {{ res.room.hotel.location }}</p>
+                            <p><strong>Oda Tipi:</strong> {{ res.room.room_type }}</p>
+                            <p><strong>Giriş Tarihi:</strong> {{ res.check_in }}</p>
+                            <p><strong>Çıkış Tarihi:</strong> {{ res.check_out }}</p>
+                            <p><strong>Toplam Fiyat:</strong> {{ res.total_price }}₺</p>
+                            <p><strong>Durum:</strong> {{ res.status }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Hiç rezervasyon bulunamadı.</p>
+    {% endif %}
+</section>
+{% endblock %}

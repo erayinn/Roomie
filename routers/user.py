@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path, HTTPException, Request
+from fastapi import APIRouter, Depends, Path, HTTPException, Request,Form
 from pydantic import BaseModel
 from starlette import status
 from models import User
@@ -10,6 +10,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
 from datetime import timedelta, datetime,timezone
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 
 router=APIRouter(
     prefix="/user",
@@ -22,23 +23,40 @@ ALGORITHM="HS256"
 bcrypt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/user/token")
 
-class UserRequest(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    password: str
-    phone_number: str
-    user_type: str
+class UserRequest:
+    def __init__(
+        self,
+        first_name: str = Form(...),
+        last_name: str = Form(...),
+        email: str = Form(...),
+        password: str = Form(...),
+        phone_number: str = Form(...),
+        user_type: str = Form(...)
+    ):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.password = password
+        self.phone_number = phone_number
+        self.user_type = user_type
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-def create_access_token(email: str,user_id:int,user_type:str,expires_delta:timedelta):
-    payload={"sub":email,"id":user_id,"user_type":user_type}
-    expires=datetime.now(timezone.utc)+expires_delta
-    payload["exp"]=int(expires.timestamp())
-    return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
+def create_access_token(email: str, user_id: int, user_type: str, first_name: str, last_name: str, expires_delta: timedelta):
+    payload = {
+        "sub": email,
+        "id": user_id,
+        "user_type": user_type,
+        "first_name": first_name,
+        "last_name": last_name
+    }
+    expires = datetime.now(timezone.utc) + expires_delta
+    payload["exp"] = int(expires.timestamp())
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 
 def auth_user(email: str, password: str,db):
@@ -49,17 +67,31 @@ def auth_user(email: str, password: str,db):
         return None
     return user
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+async def get_current_user(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token not found")
     try:
-        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
-        email:str=payload.get("sub")
-        user_id:int=payload.get("id")
-        user_type:str=payload.get("user_type")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        user_id = payload.get("id")
+        user_type = payload.get("user_type")
+        first_name = payload.get("first_name")
+        last_name = payload.get("last_name")
         if email is None or user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Email or id is missing")
-        return {"email":email,"id":user_id,"user_type":user_type}
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        return {
+            "email": email,
+            "id": user_id,
+            "user_type": user_type,
+            "first_name": first_name,
+            "last_name": last_name
+        }
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Token is invalid")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -77,7 +109,11 @@ def render_register_page(request: Request):
     return templates.TemplateResponse("register.html",{"request":request})
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_user(db: db_dependency, user_request: UserRequest):
+async def create_user(
+    db: db_dependency,
+    user_request: UserRequest = Depends()
+):
+
     user = User(
         first_name=user_request.first_name,
         last_name=user_request.last_name,
@@ -88,11 +124,38 @@ async def create_user(db: db_dependency, user_request: UserRequest):
     )
     db.add(user)
     db.commit()
+    return RedirectResponse(url="/user/login", status_code=status.HTTP_302_FOUND)
 
-@router.post("/token",response_model=Token)
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
-    user=auth_user(form_data.username,form_data.password,db)
+
+@router.post("/token")
+async def login(
+    request: Request,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: db_dependency
+):
+    user = auth_user(form_data.username, form_data.password, db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Credentials")
-    token=create_access_token(user.email,user.id,user.user_type,timedelta(hours=24))
-    return {"access_token":token,"token_type":"bearer"}
+        # Giriş başarısız → Login sayfasını hata mesajı ile tekrar göster
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "login_error": "E-posta veya şifre yanlış!"}
+        )
+
+    token = create_access_token(
+        user.email,
+        user.id,
+        user.user_type,
+        user.first_name,
+        user.last_name,
+        timedelta(hours=24)
+    )
+
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return response
+
+@router.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie("access_token")
+    return response

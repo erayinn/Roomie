@@ -28,6 +28,10 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
+@router.get("/")
+async def list_all_hotels(request: Request, db:db_dependency):
+    hotels = db.query(Hotel).all()
+    return templates.TemplateResponse("hotels.html", {"request": request, "hotels": hotels})
 
 @router.put("/{hotel_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def updaate_hotel(user:user_dependency,db: db_dependency, hotelrequest: HotelRequest, hotel_id: int=Path(gt=0)):

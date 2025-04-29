@@ -17,18 +17,26 @@
 
     {% if rooms %}
         <div class="grid grid-cols-1 gap-4">
-            {% for room in rooms %}
-                <div class="p-4 border rounded-lg shadow-md">
-                    <h3 class="text-xl font-semibold">{{ room.room_type }}</h3>
-                    <p class="text-gray-700">Fiyat: {{ room.price }} TL</p>
-                    <p class="text-gray-700">Kapasite: {{ room.capacity }} kişi</p>
-                    {% if room.availability %}
-                        <p class="text-green-600 font-bold">Müsait</p>
-                    {% else %}
-                        <p class="text-red-600 font-bold">Müsait değil</p>
-                    {% endif %}
-                </div>
-            {% endfor %}
+{% for room in rooms %}
+<div class="p-4 border rounded-lg shadow-md">
+    <h3 class="text-xl font-semibold">{{ room.room_type }}</h3>
+    <p class="text-gray-700">Fiyat: {{ room.price }} TL</p>
+    <p class="text-gray-700">Kapasite: {{ room.capacity }} kişi</p>
+    {% if room.availability %}
+        <p class="text-green-600 font-bold">Müsait</p>
+        <!-- REZERVASYON BUTONU EKLİYORUZ -->
+        <form action="/res/create_res" method="get">
+            <input type="hidden" name="room_id" value="{{ room.id }}">
+            <button type="submit" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                Rezervasyon Yap
+            </button>
+        </form>
+    {% else %}
+        <p class="text-red-600 font-bold">Müsait değil</p>
+    {% endif %}
+</div>
+{% endfor %}
+
         </div>
     {% else %}
         <p class="text-gray-500">Bu otelde henüz oda bulunmuyor.</p>

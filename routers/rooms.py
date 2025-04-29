@@ -30,6 +30,7 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+
 @router.get("/")
 async def read_all(db: db_dependency):
     rooms = db.query(Room).filter(Room.availability == True).all()

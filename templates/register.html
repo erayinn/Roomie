@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Kayıt Ol - Roomie{% endblock %}
+
+{% block content %}
+<section class="max-w-md mx-auto mt-10 bg-white p-6 rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold mb-6 text-gray-700">Kayıt Ol</h2>
+
+    <form action="/user/create" method="post" class="grid grid-cols-1 gap-4">
+        <div>
+            <label class="block text-gray-700">İsim:</label>
+            <input type="text" name="first_name" required class="w-full p-3 border rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">Soyisim:</label>
+            <input type="text" name="last_name" required class="w-full p-3 border rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">E-posta:</label>
+            <input type="email" name="email" required class="w-full p-3 border rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">Şifre:</label>
+            <input type="password" name="password" required class="w-full p-3 border rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">Telefon:</label>
+            <input type="text" name="phone_number" required class="w-full p-3 border rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">Kullanıcı Türü:</label>
+            <select name="user_type" required class="w-full p-3 border rounded-md">
+                <option value="customer">Müşteri</option>
+                <option value="manager">Otel Yöneticisi</option>
+            </select>
+        </div>
+
+        <button type="submit" class="bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">
+            Kayıt Ol
+        </button>
+    </form>
+
+    <p class="mt-4 text-center text-gray-600">
+        Zaten bir hesabınız var mı? <a href="/user/login" class="text-indigo-600 hover:underline">Giriş Yap</a>
+    </p>
+</section>
+{% endblock %}

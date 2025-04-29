@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Giriş Yap - Roomie{% endblock %}
+
+{% block content %}
+<section class="max-w-md mx-auto mt-10 bg-white p-6 rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold mb-6 text-gray-700">Giriş Yap</h2>
+
+    {% if login_error %}
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+            {{ login_error }}
+        </div>
+    {% endif %}
+
+    <form action="/user/token" method="post" class="grid grid-cols-1 gap-4">
+        <div>
+            <label class="block text-gray-700">E-posta:</label>
+            <input type="text" name="username" required class="w-full p-3 border rounded-md" placeholder="E-posta adresinizi girin">
+        </div>
+
+        <div>
+            <label class="block text-gray-700">Şifre:</label>
+            <input type="password" name="password" required class="w-full p-3 border rounded-md" placeholder="Şifrenizi girin">
+        </div>
+
+        <button type="submit" class="bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">
+            Giriş Yap
+        </button>
+    </form>
+
+    <p class="mt-4 text-center text-gray-600">
+        Hesabınız yok mu? <a href="/user/register" class="text-indigo-600 hover:underline">Kayıt Ol</a>
+    </p>
+</section>
+{% endblock %}
