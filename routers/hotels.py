@@ -1,28 +1,24 @@
 from datetime import datetime
-from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from starlette import status
-from fastapi.responses import HTMLResponse
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+import shutil
+import os
+from pydantic import BaseModel
+from starlette import status
 
 from database import SessionLocal
 from routers.user import get_current_user
-from models import Hotel
+from models import Hotel, Room
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
 templates = Jinja2Templates(directory="templates")
 
-# ----- MODELLER -----
-class HotelRequest(BaseModel):
-    name: str
-    description: str
-    location: str
-    phone_number: str
-    email: str
+UPLOAD_DIR = "static/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ----- DEPENDENCIES -----
 def get_db():
     db = SessionLocal()
     try:
@@ -33,60 +29,57 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-# ----- TÜM OTELLER LİSTESİ -----
+class HotelRequest(BaseModel):
+    name: str
+    description: str
+    location: str
+    phone_number: str
+    email: str
+
+# ------------------ Oteller listesi ------------------
 @router.get("/", response_class=HTMLResponse)
 async def list_all_hotels(request: Request, db: db_dependency):
-    user = None
     try:
         user = await get_current_user(request)
     except:
-        pass
-
+        user = None
     hotels = db.query(Hotel).all()
     return templates.TemplateResponse("hotels.html", {
         "request": request,
         "hotels": hotels,
         "user": user
     })
+# ------------------ Otel yönetim paneli ------------------
+@router.get("/manage", response_class=HTMLResponse)
+async def manage_hotel(request: Request, db: db_dependency):
+    user = await get_current_user(request)
+    if user.get("user_type") != "manager":
+        return RedirectResponse(url="/user/login", status_code=302)
 
-# ----- OTEL GÜNCELLEME -----
-@router.put("/{hotel_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def updaate_hotel(
-    user: user_dependency,
-    db: db_dependency,
-    hotelrequest: HotelRequest,
-    hotel_id: int = Path(gt=0)
-):
-    if user.get("id") != db.query(Hotel).filter(Hotel.id == hotel_id).first().manager_id:
-        raise HTTPException(status_code=401, detail="User is not authorized to update this hotel")
-
-    hotel = db.query(Hotel).filter(Hotel.id == hotel_id, Hotel.manager_id == user.get("id")).first()
-    if hotel is None:
+    hotel = db.query(Hotel).filter(Hotel.manager_id == user["id"]).first()
+    if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    for field, value in hotelrequest.dict().items():
-        setattr(hotel, field, value)
+    rooms = hotel.rooms
+    return templates.TemplateResponse("manage_hotel.html", {
+        "request": request,
+        "user": user,
+        "hotel": hotel,
+        "rooms": rooms
+    })
 
-    db.commit()
-
-# ----- OTEL DETAY + ARAMA VERİLERİ -----
+# ------------------ Otel detay sayfası ------------------
 @router.get("/{hotel_id}", response_class=HTMLResponse)
-async def get_hotel_detail(
-    request: Request,
-    db: db_dependency,
-    hotel_id: int = Path(gt=0)
-):
+async def get_hotel_detail(request: Request, db: db_dependency, hotel_id: int = Path(gt=0)):
     try:
         user = await get_current_user(request)
     except:
         user = None
 
     hotel = db.query(Hotel).filter(Hotel.id == hotel_id).first()
-
     if hotel is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hotel not found")
+        raise HTTPException(status_code=404, detail="Hotel not found")
 
-    # Query parametreleri al
     checkin_date = request.query_params.get("checkin_date")
     checkout_date = request.query_params.get("checkout_date")
     guests = request.query_params.get("guests")
@@ -103,12 +96,7 @@ async def get_hotel_detail(
                 if room.capacity < guests:
                     continue
 
-                is_available = True
-                for res in room.reservations:
-                    if not (res.check_out <= checkin_date or res.check_in >= checkout_date):
-                        is_available = False
-                        break
-
+                is_available = all(res.check_out <= checkin_date or res.check_in >= checkout_date for res in room.reservations)
                 if is_available:
                     available_rooms.append(room)
         except:
@@ -123,6 +111,38 @@ async def get_hotel_detail(
         "checkin_date": checkin_date,
         "checkout_date": checkout_date,
         "guests": guests,
-        "user": user  # ✅ EKLENDİ
+        "user": user
     })
+# ------------------ Otel güncelleme ------------------
+@router.post("/update/{hotel_id}")
+async def update_hotel(
+    db: db_dependency,
+    user: user_dependency,
+    hotel_id: int,
+    name: str = Form(...),
+    description: str = Form(...),
+    location: str = Form(...),
+    phone_number: str = Form(...),
+    email: str = Form(...),
+    image_file: UploadFile = File(None),
 
+):
+    hotel = db.query(Hotel).filter(Hotel.id == hotel_id, Hotel.manager_id == user["id"]).first()
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    if image_file:
+        filename = f"{hotel_id}_{image_file.filename}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        hotel.image_url = f"/{filepath.replace(os.sep, '/')}"
+
+    hotel.name = name
+    hotel.description = description
+    hotel.location = location
+    hotel.phone_number = phone_number
+    hotel.email = email
+
+    db.commit()
+    return RedirectResponse(url="/hotels/manage", status_code=302)

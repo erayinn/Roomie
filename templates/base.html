@@ -8,38 +8,42 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- Header -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center">
-        <a href="/" class="text-2xl font-bold text-indigo-600">Roomie</a>
-        <nav class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-<div class="space-x-4">
-    <a href="/search" class="text-gray-600 hover:text-indigo-700">Otel Ara</a>
-    <a href="/hotels" class="text-gray-600 hover:text-indigo-700">Oteller</a>
+<!-- Header -->
+<header class="bg-white shadow-md p-4 flex justify-between items-center">
+    <a href="/" class="text-2xl font-bold text-indigo-600">Roomie</a>
+    <nav class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="space-x-4">
+                <a href="/search" class="text-gray-600 hover:text-indigo-700">Otel Ara</a>
+                <a href="/hotels" class="text-gray-600 hover:text-indigo-700">Oteller</a>
 
-    {% if user %}
-        <a href="/res/myres" class="text-gray-600 hover:text-indigo-700">Rezervasyonlarım</a>
-        <span class="text-gray-700 font-semibold">{{ user.first_name }} {{ user.last_name }}</span>
-        <a href="/user/logout" class="text-red-500 hover:underline">Çıkış Yap</a>
-    {% else %}
-        <a href="/user/login" class="text-indigo-600 font-semibold">Giriş Yap</a>
-        <a href="/user/register" class="text-indigo-600 font-semibold">Kayıt Ol</a>
-    {% endif %}
-</div>
+                {% if user and user.user_type == "manager" %}
+                    <a href="/res/dashboard" class="text-gray-600 hover:text-indigo-700">Yönetici Paneli</a>
+                {% elif user %}
+                    <a href="/res/myres" class="text-gray-600 hover:text-indigo-700">Rezervasyonlarım</a>
+                {% endif %}
 
+                {% if user %}
+                    <span class="text-gray-700 font-semibold">{{ user.first_name }} {{ user.last_name }}</span>
+                    <a href="/user/logout" class="text-red-500 hover:underline">Çıkış Yap</a>
+                {% else %}
+                    <a href="/user/login" class="text-indigo-600 font-semibold">Giriş Yap</a>
+                    <a href="/user/register" class="text-indigo-600 font-semibold">Kayıt Ol</a>
+                {% endif %}
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
+</header>
 
-    <!-- Sayfa İçeriği -->
-    <main class="mt-10">
-        {% block content %}{% endblock %}
-    </main>
+<!-- Sayfa İçeriği -->
+<main class="mt-10">
+    {% block content %}{% endblock %}
+</main>
 
-    <!-- Footer -->
-    <footer class="mt-12 p-4 bg-white text-center text-gray-500 text-sm">
-        &copy; 2025 Roomie. Tüm hakları saklıdır.
-    </footer>
+<!-- Footer -->
+<footer class="mt-12 p-4 bg-white text-center text-gray-500 text-sm">
+    &copy; 2025 Roomie. Tüm hakları saklıdır.
+</footer>
 
 </body>
 </html>

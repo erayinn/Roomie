@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Otel Yönetimi{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Otel Bilgilerini Düzenle</h2>
+
+    {% if hotel %}
+    <form method="post" action="/hotels/update/{{ hotel.id }}" enctype="multipart/form-data" class="space-y-4">
+        <div>
+            <label class="block font-semibold text-gray-700">Otel Adı</label>
+            <input type="text" name="name" value="{{ hotel.name }}" class="w-full p-2 border rounded" required>
+        </div>
+        <div>
+            <label class="block font-semibold text-gray-700">Açıklama</label>
+            <textarea name="description" rows="3" class="w-full p-2 border rounded">{{ hotel.description }}</textarea>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-semibold text-gray-700">Lokasyon</label>
+                <input type="text" name="location" value="{{ hotel.location }}" class="w-full p-2 border rounded" required>
+            </div>
+            <div>
+                <label class="block font-semibold text-gray-700">Telefon</label>
+                <input type="text" name="phone_number" value="{{ hotel.phone_number }}" class="w-full p-2 border rounded">
+            </div>
+            <div>
+                <label class="block font-semibold text-gray-700">E-Posta</label>
+                <input type="email" name="email" value="{{ hotel.email }}" class="w-full p-2 border rounded">
+            </div>
+            <div>
+                <label class="block font-semibold text-gray-700">Görsel Yükle</label>
+                <input type="file" name="image_file" accept="image/*" class="w-full p-2 border rounded">
+                {% if hotel.image_url %}
+                    <img src="{{ hotel.image_url }}" class="mt-2 w-40 rounded">
+                {% endif %}
+            </div>
+        </div>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-semibold mt-4">Kaydet</button>
+    </form>
+
+    <hr class="my-10">
+
+    <div>
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Odalar</h3>
+        <a href="/rooms/create?hotel_id={{ hotel.id }}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded mb-4">Yeni Oda Ekle</a>
+        {% if rooms %}
+        <div class="space-y-4">
+            {% for room in rooms %}
+            <div class="border p-4 rounded flex justify-between items-center">
+                <div>
+                    <p><strong>Oda Tipi:</strong> {{ room.room_type }}</p>
+                    <p><strong>Fiyat:</strong> {{ room.price }}₺</p>
+                    <p><strong>Kapasite:</strong> {{ room.capacity }}</p>
+                </div>
+                <a href="/rooms/edit/{{ room.id }}" class="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded text-sm font-semibold text-white">Düzenle</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <p class="text-gray-500">Henüz oda tanımlanmamış.</p>
+        {% endif %}
+    </div>
+    {% else %}
+        <p class="text-red-500">Yönettiğiniz bir otel bulunamadı.</p>
+    {% endif %}
+</section>
+{% endblock %}

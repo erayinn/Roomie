@@ -1,31 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}Rezervasyon Yap - Roomie{% endblock %}
+{% block title %}
+    {% if res %}Rezervasyonu Düzenle{% else %}Rezervasyon Yap{% endif %} - Roomie
+{% endblock %}
 
 {% block content %}
-<!-- flatpickr stil dosyası -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
 <section class="max-w-md mx-auto mt-10 bg-white p-6 rounded-xl shadow-md">
-    <h2 class="text-2xl font-bold mb-6 text-gray-700">Rezervasyon Yap</h2>
+    <h2 class="text-2xl font-bold mb-6 text-gray-700">
+        {% if res %}Rezervasyonu Düzenle{% else %}Rezervasyon Yap{% endif %}
+    </h2>
 
-    <form id="reservationForm" action="/res/" method="post" class="grid grid-cols-1 gap-4">
-        <input type="hidden" name="room_id" value="{{ room_id }}">
-        <input type="hidden" id="room_price" value="{{ room_price }}">
+    <form id="reservationForm"
+          action="{% if res %}/res/update/{{ res.id }}{% else %}/res/{% endif %}"
+          method="post"
+          class="grid grid-cols-1 gap-4">
+
+        {% if res %}
+            <input type="hidden" name="_method" value="put">
+        {% endif %}
+
+        <input type="hidden" name="room_id" value="{{ res.room_id if res else room_id }}">
+        <input type="hidden" id="room_price" value="{{ room_price or (res.room.price if res and res.room else 0) }}">
+        <input type="hidden" name="status" value="{{ res.status if res else 'pending' }}">
 
         <div>
             <label class="block text-gray-700">Giriş Tarihi:</label>
-            <input type="text" id="check_in" name="check_in" required class="w-full p-3 border rounded-md"
-                   value="{{ checkin_date if checkin_date else '' }}">
+            <input type="date" id="check_in" name="check_in" required
+                   class="w-full p-3 border rounded-md"
+                   value="{{ res.check_in if res else checkin_date }}">
         </div>
 
         <div>
             <label class="block text-gray-700">Çıkış Tarihi:</label>
-            <input type="text" id="check_out" name="check_out" required class="w-full p-3 border rounded-md"
-                   value="{{ checkout_date if checkout_date else '' }}">
+            <input type="date" id="check_out" name="check_out" required
+                   class="w-full p-3 border rounded-md"
+                   value="{{ res.check_out if res else checkout_date }}">
         </div>
-
-        <input type="hidden" name="status" value="pending">
 
         <div>
             <label class="block text-gray-700">Toplam Ödeme:</label>
@@ -33,63 +43,37 @@
         </div>
 
         <button type="submit" class="bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">
-            Rezervasyonu Tamamla
+            {% if res %}Güncelle{% else %}Rezervasyonu Tamamla{% endif %}
         </button>
     </form>
 </section>
 
-<!-- flatpickr script -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<!-- JS ile tarih engelleme ve fiyat hesaplama -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const bookedDates = {{ booked_dates | tojson }};
-    const roomPrice = parseFloat(document.getElementById('room_price')?.value || "0");
-    const totalDisplay = document.getElementById('total_price_display');
     const checkInInput = document.getElementById('check_in');
     const checkOutInput = document.getElementById('check_out');
+    const roomPriceInput = document.getElementById('room_price');
+    const totalDisplay = document.getElementById('total_price_display');
+
+    const roomPrice = parseFloat(roomPriceInput?.value || "0");
 
     function calculateTotal() {
-        const checkIn = checkInInput.value;
-        const checkOut = checkOutInput.value;
-
-        const inDate = new Date(checkIn);
-        const outDate = new Date(checkOut);
-
-        const msDiff = outDate - inDate;
+        const checkInDate = new Date(checkInInput.value);
+        const checkOutDate = new Date(checkOutInput.value);
+        const msDiff = checkOutDate - checkInDate;
         const nights = msDiff / (1000 * 60 * 60 * 24);
 
         if (!isNaN(nights) && nights > 0) {
-            totalDisplay.textContent = `${nights * roomPrice} TL`;
+            const total = nights * roomPrice;
+            totalDisplay.textContent = `${total} TL`;
         } else {
             totalDisplay.textContent = "0 TL";
         }
     }
 
-    const checkInPicker = flatpickr(checkInInput, {
-        dateFormat: "Y-m-d",
-        disable: bookedDates,
-        minDate: "today",
-        onChange: function(selectedDates) {
-            if (selectedDates.length > 0) {
-                const minCheckout = new Date(selectedDates[0]);
-                minCheckout.setDate(minCheckout.getDate() + 1);
-                checkOutPicker.set('minDate', minCheckout);
-            }
-            calculateTotal();
-        }
-    });
-
-    const checkOutPicker = flatpickr(checkOutInput, {
-        dateFormat: "Y-m-d",
-        disable: bookedDates,
-        minDate: "today",
-        onChange: calculateTotal
-    });
-
+    checkInInput.addEventListener('change', calculateTotal);
+    checkOutInput.addEventListener('change', calculateTotal);
     calculateTotal();
 });
 </script>
-
 {% endblock %}

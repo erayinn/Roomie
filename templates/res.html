@@ -11,22 +11,48 @@
             {% for res in ress %}
                 <div class="border p-4 rounded-md shadow-md flex flex-col md:flex-row gap-4">
                     {% if res.room and res.room.hotel %}
-                        <img src="{{ res.room.hotel.image_url or 'https://via.placeholder.com/400x200' }}" alt="Otel Fotoğrafı" class="w-full md:w-64 h-40 object-cover rounded-md">
+                        <img src="{{ res.room.hotel.image_url or 'https://via.placeholder.com/400x200' }}"
+                             alt="Otel Fotoğrafı"
+                             class="w-full md:w-64 h-40 object-cover rounded-md">
                         <div class="flex-1">
-                            <p><strong>Otel:</strong> {{ res.room.hotel.name }}</p>
+                            <p class="font-semibold text-lg mb-1 text-indigo-700">{{ res.room.hotel.name }}</p>
                             <p><strong>Lokasyon:</strong> {{ res.room.hotel.location }}</p>
                             <p><strong>Oda Tipi:</strong> {{ res.room.room_type }}</p>
                             <p><strong>Giriş Tarihi:</strong> {{ res.check_in }}</p>
                             <p><strong>Çıkış Tarihi:</strong> {{ res.check_out }}</p>
                             <p><strong>Toplam Fiyat:</strong> {{ res.total_price }}₺</p>
-                            <p><strong>Durum:</strong> {{ res.status }}</p>
+                            <p><strong>Durum:</strong>
+                                {% if res.status == "approved" %}
+                                    <span class="text-green-600 font-semibold">Onaylandı</span>
+                                {% elif res.status == "pending" %}
+                                    <span class="text-yellow-600 font-semibold">Bekliyor</span>
+                                {% elif res.status == "rejected" %}
+                                    <span class="text-red-600 font-semibold">Reddedildi</span>
+                                {% endif %}
+                            </p>
+
+                            {% if res.status in ["pending", "approved"] %}
+                                <div class="flex gap-3 mt-4">
+                                    <a href="/res/edit_res/{{ res.id }}"
+                                       class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+                                        Düzenle
+                                    </a>
+                                    <form method="post" action="/res/delete/{{ res.id }}">
+                                        <button type="submit"
+                                                onclick="return confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')"
+                                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition">
+                                            İptal Et
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <p>Hiç rezervasyon bulunamadı.</p>
+        <p class="text-gray-600">Hiç rezervasyon bulunamadı.</p>
     {% endif %}
 </section>
 {% endblock %}
