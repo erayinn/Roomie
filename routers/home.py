@@ -1,23 +1,18 @@
 from typing import Optional, Annotated
-from routers.user import get_current_user
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from datetime import datetime
+
 from database import SessionLocal
 from models import Hotel
+from routers.user import get_current_user
 
 router = APIRouter()
-
 templates = Jinja2Templates(directory="templates")
 
-# Database session dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Veritabanı bağımlılığı
 def get_db():
     db = SessionLocal()
     try:
@@ -28,25 +23,34 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-# Ana sayfa
+# ---------- Ana Sayfa ----------
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: db_dependency):
-    token = request.cookies.get("access_token")
-    user = None
     try:
-        user = await get_current_user(request)  # ✅ sadece request gönderiyoruz
+        user = await get_current_user(request)
     except:
         user = None
 
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "user": user
-        }
-    )
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "user": user
+    })
 
-# Arama sonucu
+# ---------- Arama Sayfası ----------
+@router.get("/search", response_class=HTMLResponse)
+async def show_search_form(request: Request):
+    try:
+        user = await get_current_user(request)
+    except:
+        user = None
+
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "user": user,
+        "search_done": False
+    })
+
+# ---------- Arama İşleme ----------
 @router.post("/search", response_class=HTMLResponse)
 async def search_hotels(
     request: Request,
@@ -57,37 +61,57 @@ async def search_hotels(
     db: Session = Depends(get_db)
 ):
     try:
-        guests = int(guests) if guests else 1
+        user = await get_current_user(request)
+    except:
+        user = None
+
+    try:
+        checkin_date_obj = datetime.strptime(checkin_date, "%Y-%m-%d").date()
+        checkout_date_obj = datetime.strptime(checkout_date, "%Y-%m-%d").date()
     except ValueError:
-        guests = 1
-
-    hotels = db.query(Hotel).filter(Hotel.location.ilike(f"%{location}%")).all()
-
-    hotel_data = []
-    for hotel in hotels:
-        if hotel.rooms:
-            available_rooms = [room for room in hotel.rooms if room.availability and room.capacity >= guests]
-            if available_rooms:
-                min_price = min(room.price for room in available_rooms)
-            else:
-                min_price = None
-        else:
-            min_price = None
-
-        hotel_data.append({
-            "id": hotel.id,
-            "name": hotel.name,
-            "location": hotel.location,
-            "image_url": hotel.image_url if hotel.image_url else "https://via.placeholder.com/400x200",
-            "min_price": min_price
+        return templates.TemplateResponse("search.html", {
+            "request": request,
+            "user": user,
+            "error": "Geçerli bir tarih giriniz.",
+            "search_done": True
         })
 
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "hotels": hotel_data,
-            "search_done": True
-        }
-    )
+    guests = int(guests) if guests else 1
+    hotels = db.query(Hotel).filter(Hotel.location.ilike(f"%{location}%")).all()
 
+    filtered_hotels = []
+
+    for hotel in hotels:
+        available_rooms = []
+        for room in hotel.rooms:
+            if room.capacity < guests:
+                continue
+
+            is_available = True
+            for res in room.reservations:
+                if not (res.check_out <= checkin_date_obj or res.check_in >= checkout_date_obj):
+                    is_available = False
+                    break
+
+            if is_available:
+                available_rooms.append(room)
+
+        if available_rooms:
+            filtered_hotels.append({
+                "id": hotel.id,
+                "name": hotel.name,
+                "location": hotel.location,
+                "image_url": hotel.image_url or "https://via.placeholder.com/400x200",
+                "min_price": min(r.price for r in available_rooms)
+            })
+
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "user": user,
+        "hotels": filtered_hotels,
+        "search_done": True,
+        "checkin_date": checkin_date_obj,
+        "checkout_date": checkout_date_obj,
+        "guests": guests,
+        "location": location
+    })

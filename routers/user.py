@@ -108,6 +108,11 @@ def render_login_page(request: Request):
 def render_register_page(request: Request):
     return templates.TemplateResponse("register.html",{"request":request})
 
+@router.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie("access_token")
+    return response
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_user(
     db: db_dependency,
@@ -135,7 +140,6 @@ async def login(
 ):
     user = auth_user(form_data.username, form_data.password, db)
     if not user:
-        # Giriş başarısız → Login sayfasını hata mesajı ile tekrar göster
         return templates.TemplateResponse(
             "login.html",
             {"request": request, "login_error": "E-posta veya şifre yanlış!"}
@@ -151,11 +155,13 @@ async def login(
     )
 
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    response.set_cookie(key="access_token", value=token, httponly=True)
-    return response
-
-@router.get("/logout")
-async def logout():
-    response = RedirectResponse(url="/", status_code=302)
-    response.delete_cookie("access_token")
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=86400,
+        expires=86400,
+        samesite="lax",
+        secure=False
+    )
     return response

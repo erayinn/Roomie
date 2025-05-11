@@ -1,46 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}Anasayfa - Roomie{% endblock %}
+{% block title %}Ana Sayfa - Roomie{% endblock %}
 
 {% block content %}
-<section class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md">
-    <h2 class="text-xl font-semibold mb-4 text-gray-700">Hayalindeki oteli bul!</h2>
-    <form action="/search" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input name="location" type="text" placeholder="Lokasyon" class="p-3 border rounded-md" required>
-        <input name="checkin_date" type="date" class="p-3 border rounded-md" required>
-        <input name="checkout_date" type="date" class="p-3 border rounded-md" required>
-        <input name="guests" type="number" placeholder="Kişi Sayısı" min="1" class="p-3 border rounded-md" required>
-        <button type="submit" class="md:col-span-2 bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">Ara</button>
-    </form>
+<section class="text-center p-10 bg-white shadow-md rounded-lg max-w-4xl mx-auto mt-8">
+    <h1 class="text-4xl font-bold text-indigo-600 mb-4">Roomie'ye Hoş Geldiniz!</h1>
+    <p class="text-gray-600 text-lg mb-6">Kolay, hızlı ve güvenli otel rezervasyonu artık parmaklarınızın ucunda.</p>
+    <a href="/search" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+        Hemen Otel Ara
+    </a>
 </section>
 
-<section class="mt-12 max-w-6xl mx-auto p-6">
-    {% if search_done %}
-        <h2 class="text-2xl font-semibold text-gray-700 mb-6">Arama Sonuçları</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {% if hotels %}
-                {% for hotel in hotels %}
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <img src="{{ hotel.image_url }}" alt="Otel Resmi" class="w-full h-48 object-cover">
-                    <div class="p-4">
-                        <h3 class="text-lg font-semibold">{{ hotel.name }}</h3>
-                        <p class="text-gray-500">{{ hotel.location }}</p>
-                        {% if hotel.min_price %}
-                            <p class="mt-2 text-indigo-600 font-bold">Başlangıç: {{ hotel.min_price }} TL</p>
-                        {% else %}
-                            <p class="mt-2 text-red-500 font-bold">Uygun fiyat bulunamadı</p>
-                        {% endif %}
-                        <a href="/hotels/{{ hotel.id }}" class="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Detay</a>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-red-500">Hiç otel bulunamadı.</p>
-            {% endif %}
+<section class="mt-16 max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Neden Roomie?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+        <div>
+            <div class="text-indigo-600 text-4xl mb-2">💨</div>
+            <h3 class="font-semibold text-lg">Hızlı Rezervasyon</h3>
+            <p class="text-gray-600 mt-2">Saniyeler içinde yerinizi ayırtın.</p>
         </div>
-    {% else %}
-        <h2 class="text-2xl font-semibold text-gray-700 mb-6">Öne Çıkan Oteller</h2>
-        <p class="text-gray-500">Hemen üstten arama yaparak otel bulabilirsiniz.</p>
+        <div>
+            <div class="text-indigo-600 text-4xl mb-2">🏨</div>
+            <h3 class="font-semibold text-lg">Zengin Otel Seçkisi</h3>
+            <p class="text-gray-600 mt-2">Yüzlerce otel arasından seçim yapın.</p>
+        </div>
+        <div>
+            <div class="text-indigo-600 text-4xl mb-2">🔒</div>
+            <h3 class="font-semibold text-lg">Güvenli İşlem</h3>
+            <p class="text-gray-600 mt-2">Kişisel bilgileriniz güvende.</p>
+        </div>
+    </div>
+</section>
+
+<section class="mt-16 text-center">
+    {% if not user %}
+    <h2 class="text-xl text-gray-700 mb-4">Hemen katıl ve rezervasyon avantajlarını keşfet!</h2>
+    <div class="space-x-4">
+        <a href="/user/register" class="bg-green-500 text-white px-5 py-2 rounded-md hover:bg-green-600">Kayıt Ol</a>
+        <a href="/user/login" class="bg-blue-500 text-white px-5 py-2 rounded-md hover:bg-blue-600">Giriş Yap</a>
+    </div>
     {% endif %}
 </section>
 {% endblock %}

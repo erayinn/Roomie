@@ -3,6 +3,7 @@
 {% block title %}{{ hotel.name }} - Roomie{% endblock %}
 
 {% block content %}
+
 <section class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md">
     <img src="{{ hotel.image_url }}" alt="Otel Resmi" class="w-full h-64 object-cover rounded-md mb-6">
     <h2 class="text-2xl font-bold mb-2">{{ hotel.name }}</h2>
@@ -10,36 +11,68 @@
     <p class="text-gray-600 mb-2"><strong>Lokasyon:</strong> {{ hotel.location }}</p>
     <p class="text-gray-600 mb-2"><strong>Telefon:</strong> {{ hotel.phone_number }}</p>
     <p class="text-gray-600 mb-2"><strong>Email:</strong> {{ hotel.email }}</p>
+
+<form method="get" class="mt-6 flex flex-wrap gap-4 items-end">
+    <div>
+        <label class="text-sm text-gray-600">Giriş Tarihi</label>
+        <input type="date" name="checkin_date" required class="p-2 border rounded-md"
+               value="{{ checkin_date if checkin_date else '' }}">
+    </div>
+    <div>
+        <label class="text-sm text-gray-600">Çıkış Tarihi</label>
+        <input type="date" name="checkout_date" required class="p-2 border rounded-md"
+               value="{{ checkout_date if checkout_date else '' }}">
+    </div>
+    <div>
+        <label class="text-sm text-gray-600">Kişi Sayısı</label>
+        <input type="number" name="guests" min="1" class="p-2 border rounded-md w-20"
+               value="{{ guests if guests else 1 }}">
+    </div>
+    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+        Uygun Odaları Göster
+    </button>
+</form>
+
 </section>
 
 <section class="mt-10 max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md">
     <h2 class="text-2xl font-bold mb-4">Odalar</h2>
 
+    {% if checkin_date and checkout_date %}
+        <p class="mb-4 text-sm text-gray-500">
+            {{ checkin_date }} - {{ checkout_date }} arasında {{ guests }} kişilik uygun odalar listeleniyor.
+        </p>
+    {% endif %}
+
     {% if rooms %}
         <div class="grid grid-cols-1 gap-4">
-{% for room in rooms %}
-<div class="p-4 border rounded-lg shadow-md">
-    <h3 class="text-xl font-semibold">{{ room.room_type }}</h3>
-    <p class="text-gray-700">Fiyat: {{ room.price }} TL</p>
-    <p class="text-gray-700">Kapasite: {{ room.capacity }} kişi</p>
-    {% if room.availability %}
-        <p class="text-green-600 font-bold">Müsait</p>
-        <!-- REZERVASYON BUTONU EKLİYORUZ -->
-        <form action="/res/create_res" method="get">
-            <input type="hidden" name="room_id" value="{{ room.id }}">
-            <button type="submit" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-                Rezervasyon Yap
-            </button>
-        </form>
-    {% else %}
-        <p class="text-red-600 font-bold">Müsait değil</p>
-    {% endif %}
-</div>
-{% endfor %}
-
+            {% for room in rooms %}
+            <div class="p-4 border rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold">{{ room.room_type }}</h3>
+                <p class="text-gray-700">Fiyat: {{ room.price }} TL</p>
+                <p class="text-gray-700">Kapasite: {{ room.capacity }} kişi</p>
+                {% if room.availability %}
+                    <p class="text-green-600 font-bold">Müsait</p>
+                    <form action="/res/create_res" method="get">
+                        <input type="hidden" name="room_id" value="{{ room.id }}">
+                        {% if checkin_date %}
+                            <input type="hidden" name="checkin_date" value="{{ checkin_date }}">
+                            <input type="hidden" name="checkout_date" value="{{ checkout_date }}">
+                            <input type="hidden" name="guests" value="{{ guests }}">
+                        {% endif %}
+                        <button type="submit" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                            Rezervasyon Yap
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="text-red-600 font-bold">Müsait değil</p>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
     {% else %}
-        <p class="text-gray-500">Bu otelde henüz oda bulunmuyor.</p>
+        <p class="text-gray-500">Bu otelde uygun oda bulunamadı.</p>
     {% endif %}
 </section>
+
 {% endblock %}
