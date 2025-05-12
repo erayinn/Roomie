@@ -146,3 +146,54 @@ async def update_hotel(
 
     db.commit()
     return RedirectResponse(url="/hotels/manage", status_code=302)
+@router.post("/rooms/create/{hotel_id}")
+async def create_room(
+    db: db_dependency,
+    user: user_dependency,
+    hotel_id: int,
+    room_type: str = Form(...),
+    price: int = Form(...),
+    capacity: int = Form(...),
+    availability: bool = Form(False),
+):
+    hotel = db.query(Hotel).filter(Hotel.id == hotel_id, Hotel.manager_id == user["id"]).first()
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    room = Room(room_type=room_type, price=price, capacity=capacity, availability=availability, hotel_id=hotel_id)
+    db.add(room)
+    db.commit()
+    return RedirectResponse(url="/hotels/manage", status_code=302)
+
+
+@router.post("/rooms/update/{room_id}")
+async def update_room(
+    db: db_dependency,
+    user: user_dependency,
+    room_id: int,
+    room_type: str = Form(...),
+    price: int = Form(...),
+    capacity: int = Form(...),
+    availability: bool = Form(False)
+):
+    room = db.query(Room).join(Hotel).filter(Room.id == room_id, Hotel.manager_id == user["id"]).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    room.room_type = room_type
+    room.price = price
+    room.capacity = capacity
+    room.availability = availability
+    db.commit()
+    return RedirectResponse(url="/hotels/manage", status_code=302)
+
+
+@router.post("/rooms/delete/{room_id}")
+async def delete_room(room_id: int, db: db_dependency, user: user_dependency):
+    room = db.query(Room).join(Hotel).filter(Room.id == room_id, Hotel.manager_id == user["id"]).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    db.delete(room)
+    db.commit()
+    return RedirectResponse(url="/hotels/manage", status_code=302)

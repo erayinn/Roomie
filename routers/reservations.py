@@ -233,22 +233,4 @@ async def reject_reservation(res_id: int, db: db_dependency, user: user_dependen
     db.commit()
     return RedirectResponse(url="/res/manage", status_code=302)
 
-# ----------------- Dashboard -----------------
 
-@router.get("/dashboard", response_class=HTMLResponse)
-async def manager_dashboard(request: Request, db: db_dependency):
-    user = await get_current_user(request)
-    if user.get("user_type") != "manager":
-        return redirect_to_login()
-
-    hotel = db.query(Hotel).filter(Hotel.manager_id == user["id"]).first()
-    rooms = hotel.rooms if hotel else []
-    reservations = [r for room in rooms for r in room.reservations]
-
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": user,
-        "hotel": hotel,
-        "rooms": rooms,
-        "reservations": reservations
-    })

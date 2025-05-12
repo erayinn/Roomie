@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Oda Ekle{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white shadow p-6 mt-10 rounded">
+    <h2 class="text-xl font-bold mb-4">Yeni Oda Ekle</h2>
+    <form method="post" action="/rooms/create">
+        <div class="mb-4">
+            <label class="block">Oda Tipi:</label>
+            <input type="text" name="room_type" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Fiyat (₺):</label>
+            <input type="number" name="price" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Kapasite:</label>
+            <input type="number" name="capacity" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Kullanıma Açık mı?</label>
+            <select name="availability" class="w-full border p-2 rounded">
+                <option value="true">Evet</option>
+                <option value="false">Hayır</option>
+            </select>
+        </div>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Oluştur</button>
+    </form>
+</div>
+{% endblock %}

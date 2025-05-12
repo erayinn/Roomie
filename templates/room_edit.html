@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Oda Düzenle{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white shadow p-6 mt-10 rounded">
+    <h2 class="text-xl font-bold mb-4">Odayı Düzenle</h2>
+    <form method="post" action="/rooms/update/{{ room.id }}">
+        <div class="mb-4">
+            <label class="block">Oda Tipi:</label>
+            <input type="text" name="room_type" value="{{ room.room_type }}" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Fiyat (₺):</label>
+            <input type="number" name="price" value="{{ room.price }}" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Kapasite:</label>
+            <input type="number" name="capacity" value="{{ room.capacity }}" required class="w-full border p-2 rounded">
+        </div>
+        <div class="mb-4">
+            <label class="block">Kullanıma Açık mı?</label>
+            <select name="availability" class="w-full border p-2 rounded">
+                <option value="true" {% if room.availability %}selected{% endif %}>Evet</option>
+                <option value="false" {% if not room.availability %}selected{% endif %}>Hayır</option>
+            </select>
+        </div>
+        <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded">Güncelle</button>
+    </form>
+</div>
+{% endblock %}

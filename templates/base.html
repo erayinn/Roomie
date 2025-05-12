@@ -18,7 +18,7 @@
                 <a href="/hotels" class="text-gray-600 hover:text-indigo-700">Oteller</a>
 
                 {% if user and user.user_type == "manager" %}
-                    <a href="/res/dashboard" class="text-gray-600 hover:text-indigo-700">Yönetici Paneli</a>
+                    <a href="/dashboard" class="text-gray-600 hover:text-indigo-700">Yönetici Paneli</a>
                 {% elif user %}
                     <a href="/res/myres" class="text-gray-600 hover:text-indigo-700">Rezervasyonlarım</a>
                 {% endif %}
