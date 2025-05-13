@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 import shutil
 import os
 from pydantic import BaseModel
-from starlette import status
 
 from database import SessionLocal
 from routers.user import get_current_user
@@ -29,27 +28,21 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-class HotelRequest(BaseModel):
-    name: str
-    description: str
-    location: str
-    phone_number: str
-    email: str
-
-# ------------------ Oteller listesi ------------------
+# ------------------ Tüm Oteller ------------------
 @router.get("/", response_class=HTMLResponse)
 async def list_all_hotels(request: Request, db: db_dependency):
     try:
         user = await get_current_user(request)
     except:
         user = None
-    hotels = db.query(Hotel).all()
+    hotels = db.query(Hotel).filter(Hotel.is_approved == True).all()
     return templates.TemplateResponse("hotels.html", {
         "request": request,
         "hotels": hotels,
         "user": user
     })
-# ------------------ Otel yönetim paneli ------------------
+
+# ------------------ Otel Yönetim Paneli ------------------
 @router.get("/manage", response_class=HTMLResponse)
 async def manage_hotel(request: Request, db: db_dependency):
     user = await get_current_user(request)
@@ -58,7 +51,13 @@ async def manage_hotel(request: Request, db: db_dependency):
 
     hotel = db.query(Hotel).filter(Hotel.manager_id == user["id"]).first()
     if not hotel:
-        raise HTTPException(status_code=404, detail="Hotel not found")
+        return RedirectResponse(url="/hotels/create", status_code=302)
+
+    if not hotel.is_approved:
+        return templates.TemplateResponse("pending_approval.html", {
+            "request": request,
+            "user": user
+        })
 
     rooms = hotel.rooms
     return templates.TemplateResponse("manage_hotel.html", {
@@ -68,7 +67,56 @@ async def manage_hotel(request: Request, db: db_dependency):
         "rooms": rooms
     })
 
-# ------------------ Otel detay sayfası ------------------
+# ------------------ Otel Oluşturma ------------------
+@router.get("/create", response_class=HTMLResponse)
+async def create_hotel_page(request: Request, user: user_dependency):
+    return templates.TemplateResponse("create_hotel.html", {
+        "request": request,
+        "user": user
+    })
+
+@router.post("/create", response_class=HTMLResponse)
+async def create_hotel(
+    request: Request,
+    db: db_dependency,
+    user: user_dependency,
+    name: str = Form(...),
+    description: str = Form(...),
+    location: str = Form(...),
+    phone_number: str = Form(...),
+    email: str = Form(...),
+    image_file: UploadFile = File(None)
+):
+    existing = db.query(Hotel).filter(Hotel.manager_id == user["id"]).first()
+    if existing:
+        return RedirectResponse(url="/hotels/manage", status_code=302)
+
+    hotel = Hotel(
+        name=name,
+        description=description,
+        location=location,
+        phone_number=phone_number,
+        email=email,
+        manager_id=user["id"],
+        is_approved=False
+    )
+
+    if image_file:
+        filename = f"{user['id']}_{image_file.filename}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        hotel.image_url = f"/{filepath.replace(os.sep, '/')}"
+
+    db.add(hotel)
+    db.commit()
+
+    return templates.TemplateResponse("pending_approval.html", {
+        "request": request,
+        "user": user
+    })
+
+# ------------------ Otel Detayı ------------------
 @router.get("/{hotel_id}", response_class=HTMLResponse)
 async def get_hotel_detail(request: Request, db: db_dependency, hotel_id: int = Path(gt=0)):
     try:
@@ -76,8 +124,8 @@ async def get_hotel_detail(request: Request, db: db_dependency, hotel_id: int = 
     except:
         user = None
 
-    hotel = db.query(Hotel).filter(Hotel.id == hotel_id).first()
-    if hotel is None:
+    hotel = db.query(Hotel).filter(Hotel.id == hotel_id, Hotel.is_approved == True).first()
+    if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
     checkin_date = request.query_params.get("checkin_date")
@@ -113,7 +161,8 @@ async def get_hotel_detail(request: Request, db: db_dependency, hotel_id: int = 
         "guests": guests,
         "user": user
     })
-# ------------------ Otel güncelleme ------------------
+
+# ------------------ Güncelleme & Oda İşlemleri ------------------
 @router.post("/update/{hotel_id}")
 async def update_hotel(
     db: db_dependency,
@@ -124,8 +173,7 @@ async def update_hotel(
     location: str = Form(...),
     phone_number: str = Form(...),
     email: str = Form(...),
-    image_file: UploadFile = File(None),
-
+    image_file: UploadFile = File(None)
 ):
     hotel = db.query(Hotel).filter(Hotel.id == hotel_id, Hotel.manager_id == user["id"]).first()
     if not hotel:
@@ -146,6 +194,7 @@ async def update_hotel(
 
     db.commit()
     return RedirectResponse(url="/hotels/manage", status_code=302)
+
 @router.post("/rooms/create/{hotel_id}")
 async def create_room(
     db: db_dependency,
@@ -164,7 +213,6 @@ async def create_room(
     db.add(room)
     db.commit()
     return RedirectResponse(url="/hotels/manage", status_code=302)
-
 
 @router.post("/rooms/update/{room_id}")
 async def update_room(
@@ -186,7 +234,6 @@ async def update_room(
     room.availability = availability
     db.commit()
     return RedirectResponse(url="/hotels/manage", status_code=302)
-
 
 @router.post("/rooms/delete/{room_id}")
 async def delete_room(room_id: int, db: db_dependency, user: user_dependency):

@@ -10,6 +10,12 @@
         {% if res %}Rezervasyonu Düzenle{% else %}Rezervasyon Yap{% endif %}
     </h2>
 
+    {% if error_message %}
+    <div class="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
     <form id="reservationForm"
           action="{% if res %}/res/update/{{ res.id }}{% else %}/res/{% endif %}"
           method="post"
@@ -25,14 +31,14 @@
 
         <div>
             <label class="block text-gray-700">Giriş Tarihi:</label>
-            <input type="date" id="check_in" name="check_in" required
+            <input type="text" id="check_in" name="check_in" required
                    class="w-full p-3 border rounded-md"
                    value="{{ res.check_in if res else checkin_date }}">
         </div>
 
         <div>
             <label class="block text-gray-700">Çıkış Tarihi:</label>
-            <input type="date" id="check_out" name="check_out" required
+            <input type="text" id="check_out" name="check_out" required
                    class="w-full p-3 border rounded-md"
                    value="{{ res.check_out if res else checkout_date }}">
         </div>
@@ -48,14 +54,36 @@
     </form>
 </section>
 
+<!-- Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const checkInInput = document.getElementById('check_in');
     const checkOutInput = document.getElementById('check_out');
     const roomPriceInput = document.getElementById('room_price');
     const totalDisplay = document.getElementById('total_price_display');
-
     const roomPrice = parseFloat(roomPriceInput?.value || "0");
+
+    const bookedDates = {{ booked_dates | tojson }};
+    const selfCheckIn = "{{ res.check_in.strftime('%Y-%m-%d') if res else '' }}";
+    const selfCheckOut = "{{ res.check_out.strftime('%Y-%m-%d') if res else '' }}";
+
+    const allowedDates = new Set([selfCheckIn, selfCheckOut]);
+    const filteredDates = bookedDates.filter(d => !allowedDates.has(d));
+
+    flatpickr("#check_in", {
+        dateFormat: "Y-m-d",
+        disable: filteredDates,
+        minDate: "today"
+    });
+
+    flatpickr("#check_out", {
+        dateFormat: "Y-m-d",
+        disable: filteredDates,
+        minDate: "today"
+    });
 
     function calculateTotal() {
         const checkInDate = new Date(checkInInput.value);

@@ -1,8 +1,7 @@
-from datetime import datetime,timezone
-
-from database import Base
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
+from database import Base
 
 class User(Base):
     __tablename__ = 'users'
@@ -13,12 +12,11 @@ class User(Base):
     email = Column(String, unique=True)
     hashed_password = Column(String)
     phone_number = Column(String(10))
-    user_type = Column(String)
+    user_type = Column(String)  # "customer", "manager", "admin"
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     hotels = relationship("Hotel", back_populates="manager")
     reservations = relationship("Reservation", back_populates="user")
-    comments = relationship("Comment", back_populates="user")
 
 
 class Hotel(Base):
@@ -31,13 +29,12 @@ class Hotel(Base):
     phone_number = Column(String(20))
     email = Column(String(100))
     manager_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime,default=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    is_approved = Column(Boolean, default=False)
     image_url = Column(String)
 
     manager = relationship("User", back_populates="hotels")
     rooms = relationship("Room", back_populates="hotel")
-    comments = relationship("Comment", back_populates="hotel")
-
 
 class Room(Base):
     __tablename__ = 'rooms'
@@ -47,12 +44,11 @@ class Room(Base):
     room_type = Column(String(50))
     price = Column(Integer)
     capacity = Column(Integer)
-    availability = Column(Boolean)
-    created_at = Column(DateTime,default=datetime.now)
+    availability = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     hotel = relationship("Hotel", back_populates="rooms")
     reservations = relationship("Reservation", back_populates="room")
-
 
 class Reservation(Base):
     __tablename__ = 'reservations'
@@ -63,22 +59,8 @@ class Reservation(Base):
     check_in = Column(Date)
     check_out = Column(Date)
     total_price = Column(Integer)
-    status = Column(String(50))
-    created_at = Column(DateTime,default=datetime.now)
+    status = Column(String(50))  # "pending", "approved", "rejected"
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="reservations")
     room = relationship("Room", back_populates="reservations")
-
-
-class Comment(Base):
-    __tablename__ = 'comments'
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    hotel_id = Column(Integer, ForeignKey("hotels.id"))
-    rating = Column(Integer)
-    comment = Column(Text)
-    created_at = Column(DateTime,default=datetime.now)
-
-    user = relationship("User", back_populates="comments")
-    hotel = relationship("Hotel", back_populates="comments")

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Otel Onay Paneli{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto mt-10 bg-white p-6 rounded-lg shadow">
+    <h2 class="text-2xl font-bold mb-6 text-indigo-700">Otel Onay Paneli</h2>
+
+    {% if pending_hotels %}
+        <div class="grid grid-cols-1 gap-6">
+        {% for hotel in pending_hotels %}
+            <div class="flex gap-4 border p-4 rounded shadow-sm bg-gray-50">
+                <!-- Otel resmi -->
+                <img src="{{ hotel.image_url or 'https://via.placeholder.com/200x120' }}" alt="Otel Resmi" class="w-48 h-32 object-cover rounded">
+
+                <!-- Otel detayları -->
+                <div class="flex-1">
+                    <p><strong>Ad:</strong> {{ hotel.name }}</p>
+                    <p><strong>Konum:</strong> {{ hotel.location }}</p>
+                    <p><strong>Açıklama:</strong> {{ hotel.description[:150] }}...</p>
+                    <p><strong>İletişim:</strong> {{ hotel.phone_number }} | {{ hotel.email }}</p>
+                    <p><strong>Yönetici:</strong> {{ hotel.manager.first_name }} {{ hotel.manager.last_name }}</p>
+
+                    <div class="mt-3 space-x-2">
+                        <form method="post" action="/admin/approve/{{ hotel.id }}" style="display:inline">
+                            <button class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600">Onayla</button>
+                        </form>
+                        <form method="post" action="/admin/reject/{{ hotel.id }}" style="display:inline">
+                            <button class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600">Reddet</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-600">Onay bekleyen otel kaydı bulunmamaktadır.</p>
+    {% endif %}
+</section>
+{% endblock %}

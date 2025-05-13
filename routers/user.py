@@ -69,8 +69,13 @@ def auth_user(email: str, password: str,db):
 
 async def get_current_user(request: Request):
     token = request.cookies.get("access_token")
+    is_browser = request.headers.get("accept", "").startswith("text/html")
+
     if not token:
+        if is_browser:
+            return None  # HTML route'larında redirect yapılabilir
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token not found")
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
@@ -78,8 +83,10 @@ async def get_current_user(request: Request):
         user_type = payload.get("user_type")
         first_name = payload.get("first_name")
         last_name = payload.get("last_name")
+
         if email is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
         return {
             "email": email,
             "id": user_id,
@@ -87,7 +94,10 @@ async def get_current_user(request: Request):
             "first_name": first_name,
             "last_name": last_name
         }
+
     except JWTError:
+        if is_browser:
+            return None
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
@@ -102,11 +112,22 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 @router.get("/login")
 def render_login_page(request: Request):
-    return templates.TemplateResponse("login.html",{"request":request})
+    referer = request.headers.get("referer")
+    response = templates.TemplateResponse("login.html", {"request": request})
+
+    # ❗ Sadece anlamlı sayfalardan geldiyse yaz
+    if referer and all(skip not in referer for skip in ["/user/login", "/user/register", "/user/create"]):
+        response.set_cookie("redirect_after_login", referer, max_age=300)
+
+    return response
+
+
 
 @router.get("/register")
 def render_register_page(request: Request):
-    return templates.TemplateResponse("register.html",{"request":request})
+    response = templates.TemplateResponse("register.html", {"request": request})
+    response.delete_cookie("redirect_after_login")  # Kesin sil
+    return response
 
 @router.get("/logout")
 async def logout():
@@ -118,7 +139,6 @@ async def create_user(
     db: db_dependency,
     user_request: UserRequest = Depends()
 ):
-
     user = User(
         first_name=user_request.first_name,
         last_name=user_request.last_name,
@@ -129,7 +149,11 @@ async def create_user(
     )
     db.add(user)
     db.commit()
-    return RedirectResponse(url="/user/login", status_code=status.HTTP_302_FOUND)
+
+    response = RedirectResponse(url="/user/login", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie("redirect_after_login")  # Kayıt olduysa yönlendirme sıfırlanmalı
+    return response
+
 
 
 @router.post("/token")
@@ -154,7 +178,11 @@ async def login(
         timedelta(hours=24)
     )
 
-    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    redirect_url = request.cookies.get("redirect_after_login") or "/"
+    if redirect_url in ["/user/login", "/user/register"]:
+        redirect_url = "/"
+
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="access_token",
         value=token,
@@ -164,4 +192,5 @@ async def login(
         samesite="lax",
         secure=False
     )
+    response.delete_cookie("redirect_after_login")
     return response

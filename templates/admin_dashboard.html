@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Admin Paneli{% endblock %}
+
+{% block content %}
+<section class="max-w-7xl mx-auto mt-10 px-6">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6">Admin Paneli</h2>
+
+    <span id="admin-name-hidden" style="display:none;">{{ user.first_name }} {{ user.last_name }}</span>
+
+    <div class="flex flex-wrap gap-4 mb-8">
+        <a href="/admin/pending-hotels" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded shadow">Otel Onay İstekleri</a>
+        <button onclick="downloadPDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow">📄 PDF Olarak İndir</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-indigo-500">
+            <h3 class="text-gray-500 text-sm font-medium uppercase">Toplam Oda</h3>
+            <p id="total_rooms" class="mt-2 text-3xl font-semibold text-gray-800">...</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+            <h3 class="text-gray-500 text-sm font-medium uppercase">Toplam Rezervasyon</h3>
+            <p id="total_reservations" class="mt-2 text-3xl font-semibold text-gray-800">...</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
+            <h3 class="text-gray-500 text-sm font-medium uppercase">Bekleyen Rezervasyon</h3>
+            <p id="pending_reservations" class="mt-2 text-3xl font-semibold text-gray-800">...</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+            <h3 class="text-gray-500 text-sm font-medium uppercase">Toplam Gelir</h3>
+            <p id="total_income" class="mt-2 text-3xl font-semibold text-gray-800">...</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+            <h3 class="text-gray-500 text-sm font-medium uppercase">Ortalama Oda Fiyatı</h3>
+            <p id="avg_price" class="mt-2 text-3xl font-semibold text-gray-800">...</p>
+        </div>
+    </div>
+
+    <!-- Grafik -->
+    <div class="bg-white rounded-xl shadow p-6 mt-10">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">📈 Günlük Rezervasyon Grafiği</h3>
+        <canvas id="resChart" height="200" style="max-width:100%;"></canvas>
+    </div>
+
+    <!-- Görünmeyen PDF rapor alanı -->
+    <div id="pdf-report" style="visibility:hidden; position:absolute; left:-9999px; font-family: Arial, sans-serif; background:white; padding:24px; width:650px;">
+        <h2 style="text-align:center; color:#1f2937;">🧾 Admin Raporu</h2>
+        <p><strong>Admin:</strong> <span id="pdf_admin_name"></span></p>
+        <p style="text-align:right;"><strong>Tarih:</strong> <span id="current-date"></span></p>
+        <hr style="margin:10px 0;">
+        <div><strong>Toplam Oda:</strong> <span id="pdf_total_rooms"></span></div>
+        <div><strong>Toplam Rezervasyon:</strong> <span id="pdf_total_reservations"></span></div>
+        <div><strong>Bekleyen Rezervasyon:</strong> <span id="pdf_pending_reservations"></span></div>
+        <div><strong>Toplam Gelir:</strong> <span id="pdf_total_income"></span></div>
+        <div><strong>Ortalama Oda Fiyatı:</strong> <span id="pdf_avg_price"></span></div>
+
+        <h3 style="margin-top: 30px;">📊 Günlük Rezervasyon Grafiği</h3>
+        <canvas id="pdf_chart" width="600" height="300" style="display:none;"></canvas>
+        <img id="pdf_chart_image" src="" alt="Grafik" style="max-width: 100%; margin-top:10px;" />
+    </div>
+</section>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+let chartData = null;
+
+fetch("/admin/data")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("total_rooms").textContent = data.total_rooms;
+        document.getElementById("total_reservations").textContent = data.total_reservations;
+        document.getElementById("pending_reservations").textContent = data.pending_reservations;
+        document.getElementById("total_income").textContent = data.total_income + "₺";
+        document.getElementById("avg_price").textContent = data.avg_price + "₺";
+
+        chartData = {
+            labels: data.reservations_per_day.labels,
+            counts: data.reservations_per_day.counts
+        };
+
+        const ctx = document.getElementById("resChart").getContext("2d");
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Günlük Rezervasyon',
+                    data: chartData.counts,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    });
+
+function downloadPDF() {
+    const adminName = document.getElementById("admin-name-hidden")?.innerText || "Admin";
+    document.getElementById("pdf_admin_name").textContent = adminName;
+    document.getElementById("pdf_total_rooms").textContent = document.getElementById("total_rooms").textContent;
+    document.getElementById("pdf_total_reservations").textContent = document.getElementById("total_reservations").textContent;
+    document.getElementById("pdf_pending_reservations").textContent = document.getElementById("pending_reservations").textContent;
+    document.getElementById("pdf_total_income").textContent = document.getElementById("total_income").textContent;
+    document.getElementById("pdf_avg_price").textContent = document.getElementById("avg_price").textContent;
+    document.getElementById("current-date").textContent = new Date().toLocaleDateString('tr-TR');
+
+    // ⬇️ PDF için ayrı canvas oluştur
+    const pdfCtx = document.getElementById("pdf_chart").getContext("2d");
+    const pdfChart = new Chart(pdfCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Günlük Rezervasyon',
+                data: chartData.counts,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: false,
+            animation: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // ⬇️ chart yüklendikten sonra resmi yakala
+    setTimeout(() => {
+        const chartImage = document.getElementById("pdf_chart").toDataURL("image/png");
+        document.getElementById("pdf_chart_image").src = chartImage;
+
+        const element = document.getElementById("pdf-report");
+        element.style.visibility = "visible";
+        element.style.position = "static";
+        element.style.left = "0";
+
+        html2pdf().set({
+            margin: 0.5,
+            filename: 'admin_raporu_' + new Date().toISOString().slice(0, 10) + '.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        }).from(element).save().then(() => {
+            element.style.visibility = "hidden";
+            element.style.position = "absolute";
+            element.style.left = "-9999px";
+            pdfChart.destroy(); // bellek temizliği
+        });
+    }, 500);
+}
+</script>
+{% endblock %}

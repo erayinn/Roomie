@@ -30,9 +30,15 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-def redirect_to_login():
+def redirect_to_login(request: Request = None):
     response = RedirectResponse(url="/user/login", status_code=302)
     response.delete_cookie("access_token")
+
+    if request:
+        path = request.url.path
+        if path not in ["/user/login", "/user/register"]:
+            response.set_cookie("redirect_after_login", path, max_age=300)
+
     return response
 
 # ----------------- Form Modeli -----------------
@@ -85,7 +91,10 @@ async def render_create_res_page(request: Request, db: db_dependency, room_id: i
         room = db.query(Room).filter(Room.id == room_id).first()
         if room:
             room_price = room.price
-            reservations = db.query(Reservation).filter(Reservation.room_id == room_id).all()
+            reservations = db.query(Reservation).filter(
+                Reservation.room_id == room_id,
+                Reservation.status.in_(["pending", "approved"])
+            ).all()
             for r in reservations:
                 current = r.check_in
                 while current <= r.check_out:
@@ -103,18 +112,48 @@ async def render_create_res_page(request: Request, db: db_dependency, room_id: i
         "booked_dates": booked_dates
     })
 
+
 @router.post("/", status_code=201)
 async def create_res(request: Request, user: user_dependency, db: db_dependency, resrequest: ReservationRequest = Depends()):
     if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+        return redirect_to_login()
 
     room = db.query(Room).filter(Room.id == resrequest.room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
+    # Tarih çakışması kontrolü
+    conflict = db.query(Reservation).filter(
+        Reservation.room_id == resrequest.room_id,
+        Reservation.status.in_(["pending", "approved"]),
+        Reservation.check_in <= resrequest.check_out,
+        Reservation.check_out >= resrequest.check_in
+    ).first()
+
+    if conflict:
+        return templates.TemplateResponse("add-res.html", {
+            "request": request,
+            "user": user,
+            "room_id": resrequest.room_id,
+            "checkin_date": resrequest.check_in,
+            "checkout_date": resrequest.check_out,
+            "room_price": room.price,
+            "booked_dates": [],  # gerekirse tekrar hesaplanabilir
+            "error_message": "Seçilen tarih aralığında başka bir rezervasyon bulunmaktadır."
+        })
+
     nights = (resrequest.check_out - resrequest.check_in).days
     if nights <= 0:
-        raise HTTPException(status_code=400, detail="Geçersiz tarih aralığı.")
+        return templates.TemplateResponse("add-res.html", {
+            "request": request,
+            "user": user,
+            "room_id": resrequest.room_id,
+            "checkin_date": resrequest.check_in,
+            "checkout_date": resrequest.check_out,
+            "room_price": room.price,
+            "booked_dates": [],
+            "error_message": "Geçersiz tarih aralığı. Giriş tarihi çıkıştan önce olmalı."
+        })
 
     res = Reservation(
         room_id=resrequest.room_id,
@@ -127,6 +166,7 @@ async def create_res(request: Request, user: user_dependency, db: db_dependency,
     db.add(res)
     db.commit()
     return RedirectResponse(url="/res/myres", status_code=302)
+
 
 # ----------------- Düzenleme / Silme -----------------
 
@@ -141,7 +181,13 @@ async def render_edit_res_page(request: Request, db: db_dependency, res_id: int)
         raise HTTPException(status_code=404, detail="Reservation not found")
 
     booked_dates = []
-    for r in db.query(Reservation).filter(Reservation.room_id == res.room_id).all():
+    reservations = db.query(Reservation).filter(
+        Reservation.room_id == res.room_id,
+        Reservation.id != res.id,  # kendi rezervasyonu hariç
+        Reservation.status.in_(["pending", "approved"])
+    ).all()
+
+    for r in reservations:
         current = r.check_in
         while current <= r.check_out:
             booked_dates.append(current.strftime('%Y-%m-%d'))
@@ -157,6 +203,7 @@ async def render_edit_res_page(request: Request, db: db_dependency, res_id: int)
         "room_price": res.room.price,
         "booked_dates": booked_dates
     })
+
 
 @router.post("/update/{res_id}")
 async def update_res_post(request: Request, user: user_dependency, db: db_dependency, res_id: int, resrequest: ReservationRequest = Depends()):

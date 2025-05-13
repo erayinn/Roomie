@@ -9,16 +9,20 @@
 <body class="bg-gray-100">
 
 <!-- Header -->
+<!-- Header -->
 <header class="bg-white shadow-md p-4 flex justify-between items-center">
     <a href="/" class="text-2xl font-bold text-indigo-600">Roomie</a>
     <nav class="bg-white shadow">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="space-x-4">
+
                 <a href="/search" class="text-gray-600 hover:text-indigo-700">Otel Ara</a>
                 <a href="/hotels" class="text-gray-600 hover:text-indigo-700">Oteller</a>
 
                 {% if user and user.user_type == "manager" %}
                     <a href="/dashboard" class="text-gray-600 hover:text-indigo-700">Yönetici Paneli</a>
+                {% elif user and user.user_type == "admin" %}
+                    <a href="/admin/dashboard" class="text-red-600 font-bold hover:underline">Admin Paneli</a>
                 {% elif user %}
                     <a href="/res/myres" class="text-gray-600 hover:text-indigo-700">Rezervasyonlarım</a>
                 {% endif %}
@@ -34,6 +38,7 @@
         </div>
     </nav>
 </header>
+
 
 <!-- Sayfa İçeriği -->
 <main class="mt-10">

@@ -5,12 +5,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Annotated
 
 from database import SessionLocal
 from models import Hotel, Room, Reservation
 from routers.user import get_current_user
-from typing import Annotated
 
 router = APIRouter(
     prefix="/dashboard",
@@ -45,12 +45,25 @@ async def manager_dashboard(request: Request, db: db_dependency):
         return redirect_to_login()
 
     hotel = db.query(Hotel).filter(Hotel.manager_id == user["id"]).first()
-    rooms = hotel.rooms if hotel else []
+
+    # Eğer otel yoksa veya henüz onaylanmamışsa sadece bilgilendirme mesajı göster
+    if not hotel:
+        return RedirectResponse(url="/hotels/create", status_code=302)
+
+    if not hotel.is_approved:
+        return templates.TemplateResponse("pending_approval.html", {
+            "request": request,
+            "user": user,
+            "message": "Otelinizin onaylanması bekleniyor. Yönetici paneline erişim için lütfen onay sürecini tamamlayın."
+        })
+
+    # Otel onaylıysa normal dashboard içeriğini göster
+    rooms = hotel.rooms
     reservations = [r for room in rooms for r in room.reservations]
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
-        "user": user,                     # ✅ Burası çok önemli
+        "user": user,
         "hotel": hotel,
         "rooms": rooms,
         "reservations": reservations
@@ -79,18 +92,24 @@ async def dashboard_data(user: user_dependency, db: db_dependency):
 
     reservations = db.query(Reservation).filter(Reservation.room_id.in_(room_ids)).all()
 
-    # Hesaplamalar
+    # ✅ Sadece onaylılar
+    approved_reservations = [r for r in reservations if r.status == "approved"]
+
+    # Metrikler
     total_rooms = len(rooms)
-    total_reservations = len(reservations)
+    total_reservations = len(approved_reservations)  # ✅ sadece approved
     pending_reservations = sum(1 for r in reservations if r.status == "pending")
-    total_income = sum(r.total_price for r in reservations if r.status == "approved")
+    total_income = sum(r.total_price for r in approved_reservations)
     avg_price = round(sum(room.price for room in rooms) / total_rooms, 2) if total_rooms else 0
 
-    # Günlük rezervasyon istatistikleri
+    # ✅ Günlük grafik: check-in ile check-out arasındaki her günü say
     reservations_per_day = defaultdict(int)
-    for r in reservations:
-        date_str = r.check_in.strftime('%Y-%m-%d')
-        reservations_per_day[date_str] += 1
+    for r in approved_reservations:
+        current = r.check_in
+        while current <= r.check_out:
+            date_str = current.strftime('%Y-%m-%d')
+            reservations_per_day[date_str] += 1
+            current += timedelta(days=1)
 
     sorted_daily = sorted(reservations_per_day.items())
     labels = [d[0] for d in sorted_daily]
