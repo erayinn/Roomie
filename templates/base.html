@@ -26,6 +26,9 @@
                 {% elif user %}
                     <a href="/res/myres" class="text-gray-600 hover:text-indigo-700">Rezervasyonlarım</a>
                 {% endif %}
+                    {% if user and user.user_type != "admin" %}
+        <a href="/support" class="text-gray-600 hover:text-indigo-700">Destek</a>
+    {% endif %}
 
                 {% if user %}
                     <span class="text-gray-700 font-semibold">{{ user.first_name }} {{ user.last_name }}</span>
@@ -42,7 +45,9 @@
 
 <!-- Sayfa İçeriği -->
 <main class="mt-10">
-    {% block content %}{% endblock %}
+    <div class="max-w-4xl mx-auto px-4">
+        {% block content %}{% endblock %}
+    </div>
 </main>
 
 <!-- Footer -->

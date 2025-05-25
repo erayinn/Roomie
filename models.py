@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
+from zoneinfo import ZoneInfo
 
 class User(Base):
     __tablename__ = 'users'
@@ -17,6 +18,7 @@ class User(Base):
 
     hotels = relationship("Hotel", back_populates="manager")
     reservations = relationship("Reservation", back_populates="user")
+    support_tickets = relationship("SupportTicket", back_populates="user")
 
 
 class Hotel(Base):
@@ -64,3 +66,22 @@ class Reservation(Base):
 
     user = relationship("User", back_populates="reservations")
     room = relationship("Room", back_populates="reservations")
+
+class SupportTicket(Base):
+    __tablename__ = 'support_tickets'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    subject = Column(String(200))
+    message = Column(Text)
+    status = Column(String(50), default="Beklemede")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="support_tickets")
+
+    @property
+    def created_at_tr(self):
+        dt = self.created_at
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo("Europe/Istanbul"))

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Destek Talebi{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6 space-y-6">
+
+    <!-- Başlık -->
+    <h2 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
+        🆘 Destek Talebi Oluştur
+    </h2>
+
+    <!-- Form -->
+    <form method="post" class="space-y-4">
+        <div>
+            <label for="subject" class="block text-sm font-medium text-gray-700">Konu</label>
+            <input type="text" id="subject" name="subject" required
+                   class="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+            <label for="message" class="block text-sm font-medium text-gray-700">Açıklama</label>
+            <textarea id="message" name="message" rows="4" required
+                      class="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+        </div>
+
+        <div class="text-right">
+            <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded">
+                Gönder
+            </button>
+        </div>
+    </form>
+
+    <!-- Önceki Talepler -->
+    <div>
+        <h3 class="text-xl font-semibold mb-2 flex items-center gap-2">📋 Önceki Talepleriniz</h3>
+        {% if tickets %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-300 divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-100 text-left">
+                <tr>
+                    <th class="px-4 py-2">#</th>
+                    <th class="px-4 py-2">Konu</th>
+                    <th class="px-4 py-2">Durum</th>
+                    <th class="px-4 py-2">Tarih</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                {% for ticket in tickets %}
+                <tr>
+                    <td class="px-4 py-2">{{ ticket.id }}</td>
+                    <td class="px-4 py-2">{{ ticket.subject }}</td>
+                    <td class="px-4 py-2">
+                        {% if ticket.status == "Beklemede" %}
+                        <span class="text-yellow-700 bg-yellow-100 px-2 py-1 rounded text-xs font-medium">Beklemede</span>
+                        {% elif ticket.status == "Yanıtlandı" %}
+                        <span class="text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-medium">Yanıtlandı</span>
+                        {% elif ticket.status == "Çözüldü" %}
+                        <span class="text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-medium">Çözüldü</span>
+                        {% else %}
+                        <span class="text-gray-700">{{ ticket.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">{{ ticket.created_at_tr.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">Henüz hiçbir destek talebiniz yok.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

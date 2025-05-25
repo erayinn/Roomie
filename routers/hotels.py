@@ -179,7 +179,8 @@ async def update_hotel(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    if image_file:
+    # 👇 Yeni dosya yüklendiyse güncelle, yoksa dokunma
+    if image_file and image_file.filename:
         filename = f"{hotel_id}_{image_file.filename}"
         filepath = os.path.join(UPLOAD_DIR, filename)
         with open(filepath, "wb") as buffer:

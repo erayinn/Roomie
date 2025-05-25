@@ -1,6 +1,6 @@
 # routers/admin.py
 
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends, HTTPException, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from datetime import timedelta
 from fastapi import status
 from fastapi.responses import RedirectResponse
 from database import SessionLocal
-from models import Hotel, Room, Reservation
+from models import Hotel, Room, Reservation,SupportTicket
 from routers.user import get_current_user
 
 router = APIRouter(
@@ -136,3 +136,33 @@ async def reject_hotel(hotel_id: int, db: db_dependency, user: user_dependency):
     db.commit()
 
     return RedirectResponse(url="/admin/pending-hotels", status_code=status.HTTP_302_FOUND)
+
+@router.get("/support", response_class=HTMLResponse)
+async def view_support_tickets(request: Request, db: db_dependency):
+    user = await get_current_user(request)
+    if not user or user.get("user_type") != "admin":
+        return redirect_to_login()
+
+    tickets = db.query(SupportTicket).order_by(SupportTicket.created_at.desc()).all()
+    return templates.TemplateResponse("admin_support.html", {
+        "request": request,
+        "user": user,
+        "tickets": tickets
+    })
+
+@router.post("/support/update", response_class=RedirectResponse)
+async def update_ticket_status(
+    request: Request,
+    db: db_dependency,
+    user: user_dependency,
+    ticket_id: int = Form(...),
+    status: str = Form(...)
+):
+    if user["user_type"] != "admin":
+        return redirect_to_login()
+
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if ticket:
+        ticket.status = status
+        db.commit()
+    return RedirectResponse(url="/admin/support", status_code=303)

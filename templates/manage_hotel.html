@@ -47,16 +47,28 @@
         <a href="/rooms/create?hotel_id={{ hotel.id }}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded mb-4">Yeni Oda Ekle</a>
         {% if rooms %}
         <div class="space-y-4">
-            {% for room in rooms %}
-            <div class="border p-4 rounded flex justify-between items-center">
-                <div>
-                    <p><strong>Oda Tipi:</strong> {{ room.room_type }}</p>
-                    <p><strong>Fiyat:</strong> {{ room.price }}₺</p>
-                    <p><strong>Kapasite:</strong> {{ room.capacity }}</p>
-                </div>
-                <a href="/rooms/edit/{{ room.id }}" class="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded text-sm font-semibold text-white">Düzenle</a>
-            </div>
-            {% endfor %}
+{% for room in rooms %}
+    <div class="border p-4 rounded shadow-sm bg-gray-50">
+        <p><strong>Oda Tipi:</strong> {{ room.room_type }}</p>
+        <p><strong>Fiyat:</strong> {{ room.price }} TL</p>
+        <p><strong>Kapasite:</strong> {{ room.capacity }} kişi</p>
+        <p><strong>Durum:</strong>
+            {% if room.availability %}
+                <span class="text-green-600">Müsait</span>
+            {% else %}
+                <span class="text-red-600">Kullanıma Kapalı</span>
+            {% endif %}
+        </p>
+
+        <div class="mt-3 space-x-2">
+            <a href="/rooms/edit/{{ room.id }}" class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600">Düzenle</a>
+            <form method="post" action="/hotels/rooms/delete/{{ room.id }}" style="display:inline;" onsubmit="return confirm('Bu odayı silmek istediğinize emin misiniz?');">
+                <button class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600">Sil</button>
+            </form>
+        </div>
+        </div>
+    </div>
+{% endfor %}
         </div>
         {% else %}
             <p class="text-gray-500">Henüz oda tanımlanmamış.</p>
